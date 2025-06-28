@@ -8,6 +8,8 @@ import os
 import sys
 import click
 import git
+import difflib
+
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
@@ -110,11 +112,41 @@ class GitAnalyzer:
 
             if diff.diff:
                 change.diff_content = diff.diff.decode("utf-8", errors="ignore")
-                for line in change.diff_content.split("\n"):
-                    if line.startswith("+") and not line.startswith("+++"):
-                        change.lines_added += 1
-                    elif line.startswith("-") and not line.startswith("---"):
-                        change.lines_removed += 1
+            else:
+                # Gerar diff manualmente
+                try:
+                    a_text = (
+                        diff.a_blob.data_stream.read()
+                        .decode("utf-8", errors="ignore")
+                        .splitlines()
+                    )
+                except Exception:
+                    a_text = []
+
+                try:
+                    b_text = (
+                        diff.b_blob.data_stream.read()
+                        .decode("utf-8", errors="ignore")
+                        .splitlines()
+                    )
+                except Exception:
+                    b_text = []
+
+                unified_diff = difflib.unified_diff(
+                    a_text,
+                    b_text,
+                    fromfile=f"a/{diff.a_path}",
+                    tofile=f"b/{diff.b_path}",
+                    lineterm="",
+                )
+                change.diff_content = "\n".join(unified_diff)
+
+            # Agora, processar o conteúdo do diff_content para contar linhas:
+            for line in change.diff_content.split("\n"):
+                if line.startswith("+") and not line.startswith("+++"):
+                    change.lines_added += 1
+                elif line.startswith("-") and not line.startswith("---"):
+                    change.lines_removed += 1
 
             changes.append(change)
 
@@ -179,6 +211,7 @@ class GitAnalysisTool(BaseTool):
                     "file": change.file_path,
                     "lines_added": change.lines_added,
                     "lines_removed": change.lines_removed,
+                    "diff": change.diff_content,
                 }
             )
 
