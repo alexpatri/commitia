@@ -26,7 +26,7 @@ def get_llm():
         click.echo("    Obtenha sua chave em: https://aistudio.google.com/", err=True)
         sys.exit(1)
 
-    return LLM(model="gemini/gemini-1.5-flash", temperature=0.3, api_key=api_key)
+    return LLM(model="gemini/gemini-2.0-flash-lite", temperature=0.3, api_key=api_key)
 
 
 @dataclass
